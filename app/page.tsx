@@ -58,7 +58,7 @@ export default function UserListPage() {
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-semibold">User List</h1>
-        <Link href="/member/new" className="bg-blue-500 text-white px-4 py-2 rounded">
+        <Link href="/member/add" className="bg-blue-500 text-white px-4 py-2 rounded">
           Create User
         </Link>
       </div>
