@@ -14,12 +14,16 @@ interface User {
 export default function UserListPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         const res = await fetch("/api/member");
-        if (!res.ok) throw new Error("Failed to fetch users");
+        if (!res.ok) {
+          const errorText = await res.text(); // Get the response text for better error context
+          throw new Error(`Failed to fetch users: ${res.status} ${errorText}`);
+        }
 
         const data = await res.json();
         if (Array.isArray(data)) {
@@ -29,6 +33,7 @@ export default function UserListPage() {
         }
       } catch (error) {
         console.error("Error fetching users:", error);
+        setError(error instanceof Error ? error.message : "An unknown error occurred");
       } finally {
         setLoading(false);
       }
@@ -43,7 +48,7 @@ export default function UserListPage() {
       if (!res.ok) throw new Error("Failed to delete user");
 
       setUsers((prevUsers) => prevUsers.filter((user) => user._id !== id));
-      alert("User deleted successfully.");
+      alert("User  deleted successfully.");
     } catch (error) {
       console.error("Error deleting user:", error);
       alert("Failed to delete user.");
@@ -54,10 +59,14 @@ export default function UserListPage() {
     return <div className="text-center p-4">Loading users...</div>;
   }
 
+  if (error) {
+    return <div className="text-center p-4 text-red-500">Error: {error}</div>;
+  }
+
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-semibold">User List</h1>
+        <h1 className="text-xl font-semibold">User  List</h1>
         <Link href="/member/add" className="bg-blue-500 text-white px-4 py-2 rounded">
           Create User
         </Link>
