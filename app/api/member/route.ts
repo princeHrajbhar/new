@@ -3,23 +3,25 @@ import { connectToDB } from "@/lib/mongoDB";
 import { UploadImage } from "@/lib/upload-image";
 import { NextRequest, NextResponse } from "next/server";
 
-connectToDB();
 
 export const GET = async () => {
     try {
-      const images = await ImageGallaryModel.find({});
-      
-      // Return just the images array, without wrapping it in an object
-      return NextResponse.json(images, { status: 200 });
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch data" },
-        { status: 500 }
-      );
+      await connectToDB();
+  
+      const members = await ImageGallaryModel.find().sort({ createdAt: "desc" });
+  
+      if (!members.length) {
+        return NextResponse.json({ message: "No members found" }, { status: 404 });
+      }
+  
+      return NextResponse.json(members, { status: 200 });
+    } catch (err) {
+      console.error("[members_GET]", err);
+      return new NextResponse("Internal Server Error", { status: 500 });
     }
   };
   
+
 
 export const POST = async (req: NextRequest) => {
     try {
@@ -37,6 +39,8 @@ export const POST = async (req: NextRequest) => {
 
         // Upload the image
         const data = await UploadImage(image, "nextjs-imagegallary");
+
+        await connectToDB()
 
         // Save the uploaded image and additional details to the database
         await ImageGallaryModel.create({
