@@ -14,20 +14,29 @@ interface User {
 export default function UserListPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
+      setLoading(true); // Ensure loading state is set
+      setError(null); // Reset error state
       try {
-        const res = await fetch("/api/member");
-        if (!res.ok) throw new Error("Failed to fetch users");
+        const res = await fetch("/api/member", { method: "GET" });
+
+        if (!res.ok) {
+          const errorMessage = `Failed to fetch users: ${res.status} ${res.statusText}`;
+          throw new Error(errorMessage);
+        }
 
         const data = await res.json();
+
         if (Array.isArray(data)) {
-          setUsers(data); // Directly set the fetched data as users
+          setUsers(data);
         } else {
-          console.error("Fetched data is not in the expected format:", data);
+          throw new Error("Unexpected data format from the API");
         }
-      } catch (error) {
+      } catch (error: any) {
+        setError(error.message || "An unknown error occurred");
         console.error("Error fetching users:", error);
       } finally {
         setLoading(false);
@@ -38,20 +47,31 @@ export default function UserListPage() {
   }, []);
 
   const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+
     try {
       const res = await fetch(`/api/member/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete user");
 
+      if (!res.ok) {
+        const errorMessage = `Failed to delete user: ${res.status} ${res.statusText}`;
+        throw new Error(errorMessage);
+      }
+
+      // Optimistic UI update
       setUsers((prevUsers) => prevUsers.filter((user) => user._id !== id));
       alert("User deleted successfully.");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting user:", error);
-      alert("Failed to delete user.");
+      alert("Failed to delete user. Please try again.");
     }
   };
 
   if (loading) {
     return <div className="text-center p-4">Loading users...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center p-4 text-red-500">Error: {error}</div>;
   }
 
   return (
