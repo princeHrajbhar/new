@@ -35,8 +35,10 @@ export default function UserListPage() {
         } else {
           throw new Error("Unexpected data format from the API");
         }
-      } catch (error: any) {
-        setError(error.message || "An unknown error occurred");
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : "An unknown error occurred";
+        setError(errorMessage);
         console.error("Error fetching users:", error);
       } finally {
         setLoading(false);
@@ -60,9 +62,11 @@ export default function UserListPage() {
       // Optimistic UI update
       setUsers((prevUsers) => prevUsers.filter((user) => user._id !== id));
       alert("User deleted successfully.");
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "An unknown error occurred";
       console.error("Error deleting user:", error);
-      alert("Failed to delete user. Please try again.");
+      alert(errorMessage);
     }
   };
 
