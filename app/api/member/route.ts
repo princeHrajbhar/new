@@ -4,23 +4,23 @@ import { UploadImage } from "@/lib/upload-image";
 import { NextRequest, NextResponse } from "next/server";
 
 
+
 export const GET = async () => {
     try {
-      await connectToDB();
+      await connectToDB(); // Ensure the MongoDB connection is successful
   
-      const members = await ImageGallaryModel.find().sort({ createdAt: "desc" });
+      const members = await ImageGallaryModel.find().sort({ createdAt: "desc" }); // Fetch members sorted by creation date
   
-      if (!members.length) {
-        return NextResponse.json({ message: "No members found" }, { status: 404 });
+      if (members.length === 0) {
+        return NextResponse.json({ message: "No members found" }, { status: 200 }); // Return empty array response
       }
   
-      return NextResponse.json(members, { status: 200 });
+      return NextResponse.json(members, { status: 200 }); // Return the members
     } catch (err) {
       console.error("[members_GET]", err);
-      return new NextResponse("Internal Server Error", { status: 500 });
+      return new NextResponse("Internal Server Error", { status: 500 }); // Return 500 error if something goes wrong
     }
   };
-  
 
 
 export const POST = async (req: NextRequest) => {
