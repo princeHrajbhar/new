@@ -13,11 +13,19 @@ interface User {
   image_url: string;
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = async (url: string) => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error("Failed to fetch data");
+  }
+  return response.json();
+};
 
 export default function UserListPage() {
-  const { data: users, error, mutate } = useSWR<User[]>("/api/member", fetcher);
+  const { data, error, mutate } = useSWR<User[]>("/api/member", fetcher);
   const [deleting, setDeleting] = useState<string | null>(null);
+
+  const users = Array.isArray(data) ? data : []; // Ensure users is always an array
 
   const handleDelete = async (id: string) => {
     setDeleting(id);
@@ -25,7 +33,8 @@ export default function UserListPage() {
       const res = await fetch(`/api/member/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete user");
 
-      mutate(users?.filter((user) => user._id !== id), false);
+      // Optimistically update UI
+      mutate(users.filter((user) => user._id !== id), false);
     } catch (error) {
       console.error("Error deleting user:", error);
     } finally {
@@ -37,7 +46,7 @@ export default function UserListPage() {
     return <div className="text-center text-red-500 p-4">Failed to load users.</div>;
   }
 
-  if (!users) {
+  if (!data) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="animate-spin">
