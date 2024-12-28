@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import useSWR from "swr";
+import { useState } from "react";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
 
 interface User {
   _id: string;
@@ -11,132 +13,112 @@ interface User {
   image_url: string;
 }
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 export default function UserListPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      setLoading(true); // Ensure loading state is set
-      setError(null); // Reset error state
-      try {
-        const res = await fetch("/api/member", { method: "GET" });
-
-        if (!res.ok) {
-          const errorMessage = `Failed to fetch users: ${res.status} ${res.statusText}`;
-          throw new Error(errorMessage);
-        }
-
-        const data = await res.json();
-
-        if (Array.isArray(data)) {
-          setUsers(data);
-        } else {
-          throw new Error("Unexpected data format from the API");
-        }
-      } catch (error: unknown) {
-        const errorMessage =
-          error instanceof Error ? error.message : "An unknown error occurred";
-        setError(errorMessage);
-        console.error("Error fetching users:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUsers();
-  }, []);
+  const { data: users, error, mutate } = useSWR<User[]>("/api/member", fetcher);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-
+    setDeleting(id);
     try {
       const res = await fetch(`/api/member/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete user");
 
-      if (!res.ok) {
-        const errorMessage = `Failed to delete user: ${res.status} ${res.statusText}`;
-        throw new Error(errorMessage);
-      }
-
-      // Optimistic UI update
-      setUsers((prevUsers) => prevUsers.filter((user) => user._id !== id));
-      alert("User deleted successfully.");
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An unknown error occurred";
+      mutate(users?.filter((user) => user._id !== id), false);
+    } catch (error) {
       console.error("Error deleting user:", error);
-      alert(errorMessage);
+    } finally {
+      setDeleting(null);
     }
   };
 
-  if (loading) {
-    return <div className="text-center p-4">Loading users...</div>;
+  if (error) {
+    return <div className="text-center text-red-500 p-4">Failed to load users.</div>;
   }
 
-  if (error) {
-    return <div className="text-center p-4 text-red-500">Error: {error}</div>;
+  if (!users) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin">
+          <AiOutlineLoading3Quarters size={48} color="blue" />
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-semibold">User List</h1>
-        <Link href="/member/add" className="bg-blue-500 text-white px-4 py-2 rounded">
-          Create User
-        </Link>
-      </div>
+    <div className="bg-gray-900 text-white min-h-screen p-6">
+      <div className="container mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">User List</h1>
+          <Link
+            href="/member/add"
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded shadow"
+          >
+            Create User
+          </Link>
+        </div>
 
-      <table className="min-w-full border-collapse border border-gray-300 table-auto">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border px-4 py-2">Name</th>
-            <th className="border px-4 py-2">Email</th>
-            <th className="border px-4 py-2">Image</th>
-            <th className="border px-4 py-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.length === 0 ? (
+        <table className="min-w-full border-collapse bg-gray-800 rounded-lg overflow-hidden">
+          <thead className="bg-gray-700">
             <tr>
-              <td colSpan={4} className="border px-4 py-2 text-center">
-                No users found.
-              </td>
+              <th className="py-3 px-4 text-left">Name</th>
+              <th className="py-3 px-4 text-left">Email</th>
+              <th className="py-3 px-4 text-center">Image</th>
+              <th className="py-3 px-4 text-center">Actions</th>
             </tr>
-          ) : (
-            users.map((user) => (
-              <tr key={user._id} className="hover:bg-gray-50">
-                <td className="border px-4 py-2">{user.name}</td>
-                <td className="border px-4 py-2">{user.email}</td>
-                <td className="border px-4 py-2 text-center">
-                  {user.image_url ? (
-                    <Image
-                      src={user.image_url}
-                      alt={`${user.name}'s avatar`}
-                      width={64}
-                      height={64}
-                      className="rounded-full"
-                    />
-                  ) : (
-                    <span>No Image</span>
-                  )}
-                </td>
-                <td className="border px-4 py-2 text-center">
-                  <Link href={`/member/${user._id}`} className="text-blue-500 mr-4">
-                    Edit
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(user._id)}
-                    className="text-red-500 hover:underline"
-                  >
-                    Delete
-                  </button>
+          </thead>
+          <tbody>
+            {users.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="py-6 text-center">
+                  No users found.
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : (
+              users.map((user) => (
+                <tr
+                  key={user._id}
+                  className="hover:bg-gray-700 transition-colors"
+                >
+                  <td className="py-4 px-4">{user.name}</td>
+                  <td className="py-4 px-4">{user.email}</td>
+                  <td className="py-4 px-4 text-center">
+                    {user.image_url ? (
+                      <Image
+                        src={user.image_url}
+                        alt={`${user.name}'s avatar`}
+                        width={64}
+                        height={64}
+                        className="aspect-square object-cover rounded-full mx-auto"
+                      />
+                    ) : (
+                      <span>No Image</span>
+                    )}
+                  </td>
+                  <td className="py-4 px-4 text-center">
+                    <Link
+                      href={`/member/${user._id}`}
+                      className="text-blue-400 hover:text-blue-300 mr-4"
+                    >
+                      Edit
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(user._id)}
+                      className={`text-red-400 hover:text-red-300 ${
+                        deleting === user._id ? "opacity-50 pointer-events-none" : ""
+                      }`}
+                    >
+                      {deleting === user._id ? "Deleting..." : "Delete"}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
