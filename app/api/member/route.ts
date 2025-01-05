@@ -1,9 +1,5 @@
-// Disable unused variable rule for 'req' in this file
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 import { connectToDB } from "@/lib/mongoDB";
 import ImageGallaryModel from "@/models/ImageGallarySchema";
-
 import { NextRequest, NextResponse } from "next/server";
 import { UploadImage } from "@/lib/upload-image";
 
@@ -22,6 +18,11 @@ export const POST = async (req: NextRequest) => {
     // Validate input
     if (!name || !email || !image) {
       return NextResponse.json({ error: "Name, email, and image are required" }, { status: 400 });
+    }
+
+    // Validate Image Size (optional, but helpful)
+    if (image.size > 5 * 1024 * 1024) { // 5MB limit
+      return NextResponse.json({ error: "Image size must be less than 5MB" }, { status: 400 });
     }
 
     // Upload image to Cloudinary
@@ -54,14 +55,20 @@ export const POST = async (req: NextRequest) => {
   }
 };
 
-// GET function (for retrieving all members)
 export const GET = async (req: NextRequest) => {
   try {
     // Connect to MongoDB
     await connectToDB();
 
-    // Fetch all members from the database
-    const members = await ImageGallaryModel.find();
+    // Get pagination parameters from the query string (with default values)
+    const url = new URL(req.url);
+    const page = parseInt(url.searchParams.get("page") || "1", 10); // Default to 1 if not found
+    const limit = parseInt(url.searchParams.get("limit") || "10", 10); // Default to 10 if not found
+
+    // Fetch members from the database with pagination
+    const members = await ImageGallaryModel.find()
+      .skip((page - 1) * limit) // Skip based on page number
+      .limit(limit); // Limit the number of results
 
     // If no members are found
     if (members.length === 0) {
@@ -78,4 +85,3 @@ export const GET = async (req: NextRequest) => {
     );
   }
 };
-
