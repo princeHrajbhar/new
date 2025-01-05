@@ -2,7 +2,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { connectToDB } from "@/lib/mongoDB";
-import ImageGallaryModel from "@/models/ImageGallaryModel";
+import ImageGallaryModel from "@/models/ImageGallarySchema";
+
 import { NextRequest, NextResponse } from "next/server";
 import { UploadImage } from "@/lib/upload-image";
 
@@ -77,3 +78,4 @@ export const GET = async (req: NextRequest) => {
     );
   }
 };
+

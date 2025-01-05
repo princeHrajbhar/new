@@ -1,64 +1,98 @@
-"use client"; // Mark this component as a client component
+"use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image"; // Import Next.js Image component
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface Member {
-    name: string;
-    email: string;
-    image_url: string;
-    public_id: string;
+  _id: string;
+  name: string;
+  email: string;
+  image_url: string;
 }
 
-const MembersPage = () => {
-    const [members, setMembers] = useState<Member[]>([]);
-    const [loading, setLoading] = useState(true);
+export default function MembersPage() {
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-    useEffect(() => {
-        const fetchMembers = async () => {
-            try {
-                const response = await fetch("/api/member");
-                if (!response.ok) {
-                    console.error("Failed to fetch members");
-                    return;
-                }
-                const { data } = await response.json();  // Adjust this line to extract the 'data' field correctly
-                setMembers(data);  // Set the members with the correct data
-            } catch (error) {
-                console.error("Error fetching members:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        const response = await fetch("/api/member");
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status} ${response.statusText}`);
+        }
+        const data = await response.json();
+        setMembers(data.data || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        fetchMembers();
-    }, []);
+    fetchMembers();
+  }, []);
 
-    if (loading) {
-        return <div>Loading...</div>;
-    }
+  if (loading) return <p>Loading members...</p>;
+  if (error) return <p>Error: {error}</p>;
 
-    return (
-        <div>
-            <h1>Members</h1>
-            <ul>
-                {members.map((member) => (
-                    <li key={member.public_id} style={{ marginBottom: "1rem" }}>
-                        {/* Use Next.js Image component */}
-                        <Image
-                            src={member.image_url}
-                            alt={member.name}
-                            width={100}
-                            height={100}
-                            style={{ borderRadius: "50%" }} // Optional styling
-                        />
-                        <h2>{member.name}</h2>
-                        <p>{member.email}</p>
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
-};
-
-export default MembersPage;
+  return (
+    <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h1>Members</h1>
+        <button
+          onClick={() => router.push("/member/add")}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: "#007bff",
+            color: "#fff",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+            fontSize: "16px",
+          }}
+        >
+          Add Member
+        </button>
+      </div>
+      {members.length === 0 ? (
+        <p>No members found.</p>
+      ) : (
+        <ul style={{ listStyleType: "none", padding: 0 }}>
+          {members.map((member) => (
+            <li
+              key={member._id}
+              style={{
+                marginBottom: "20px",
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                padding: "10px",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Image
+                src={member.image_url}
+                alt={`${member.name}'s profile`}
+                width={80}
+                height={80}
+                style={{
+                  borderRadius: "50%",
+                  marginRight: "20px",
+                  objectFit: "cover",
+                }}
+              />
+              <div>
+                <h3 style={{ margin: "0 0 5px" }}>{member.name}</h3>
+                <p style={{ margin: 0 }}>{member.email}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
